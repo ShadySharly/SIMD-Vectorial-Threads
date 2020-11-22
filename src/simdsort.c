@@ -7,9 +7,11 @@
 # include <stdio.h>
 # include <unistd.h>
 # include <string.h>
+# include <omp.h>
 # include <pmmintrin.h>
 
 # include "../header/simdsort.h"
+# include "../header/structs.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////// FUNCTIONS //////////////////////////////////////////////////////////////////////////
@@ -25,7 +27,7 @@
 //                iValue, oValue, nValue y dValue, en cada caso verificando la validez del valor entragado para cada bandera. Si alguna de estas banderas
 //                no cumple con los formatos especificados el programa es interrumpido.
 
-void getParams (int argc, char** argv, char* iValue, char* oValue, char* nValue, char* dValue) {
+void getParams (int argc, char** argv, char* iValue, char* oValue, char* nValue, char* dValue, char* lValue, char* hValue) {
 
     int c;
     // i: Archivo binario con la lista de entrada desordenados (string)
@@ -34,81 +36,282 @@ void getParams (int argc, char** argv, char* iValue, char* oValue, char* nValue,
     // d: Bandera (Mostrar resultados por pantalla (1) o no (0)) (binario)
     // Ejecutar como:
     //      ./simdsort -i desordenada.raw -o ordenada.raw -N num_elementos -d debug
-    while ( (c = getopt (argc, argv, "i:o:N:d:")) != -1) {
 
-        switch (c) {
-            case 'i':
-                strcpy(iValue, optarg);
-                // Verificacion que el archivo de entrada existe 
-                if (!exist(iValue)) {
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    printf (" => El argumento de -%c debe ser un ARCHIVO EXISTENTE.\n", c);
-                    printf (" => Programa abortado\n");
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    exit(EXIT_FAILURE);
-                }       
+    if ( (iValue != NULL) && (oValue != NULL) && (nValue != NULL) && (dValue != NULL) && (lValue != NULL) && (hValue != NULL)) {
 
-                //printf(" => Ruta del archivo de entrada (-i): %s\n", iValue);
-                break;
-            
-            case 'o':
-                // Obtencion de el nombre del archivo de salida
-                strcpy(oValue, optarg);
-                //printf(" => Ruta del archivo de salida (-o): %s\n", oValue);
-                break;
-            
-            case 'N':
-                strcpy(nValue, optarg);
-                // Verificacion de que el N entregado es un entero positivo.
-                if (!isInteger(nValue)) {
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    printf (" => El argumento de -%c debe ser un ENTERO POSITIVO.\n", c);
-                    printf (" => Programa abortado\n");
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    exit(EXIT_FAILURE);
-                }
-            
-                //printf(" => Largo de la lista (-N): %s\n", nValue);
-                break;
-            
-            case 'd':
-                strcpy(dValue, optarg);
-                // Verificacion de que se ingresa un valor binario (1 o 0)
-                if ( (strcmp(dValue, "0") != 0) && (strcmp(dValue, "1") != 0) ) {
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    printf (" => El argumento de -%c debe ser un VALOR BINARIO (1 o 0).\n", c);
-                    printf (" => Programa abortado\n");
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    exit(EXIT_FAILURE);
-                }
+        while ( (c = getopt (argc, argv, "i:o:N:d:l:h:")) != -1) {
+            switch (c) {
+                case 'i':
+                    strcpy(iValue, optarg);
+                    // Verificacion que el archivo de entrada existe 
+                    if (!exist(iValue)) {
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        printf (" => El argumento de -%c debe ser un ARCHIVO EXISTENTE.\n", c);
+                        printf (" => Programa abortado\n");
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        exit(EXIT_FAILURE);
+                    }       
 
-                //printf(" => Opcion debug (-d): %s\n", dValue);
-                break;
-            
-            case '?':
-                // Verificacion de existencia de argumentos
-                if ( (optopt == 'i') || (optopt == 'o') || (optopt == 'N') || (optopt == 'd')) { 
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    printf (" => La opcion -%c requiere un argumento.\n", optopt);
-                    printf (" => Programa abortado\n");
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    exit(EXIT_FAILURE);
-                }
-                // Verificacion de la validez de las banderas
-                else if (isprint (optopt)) {
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    printf (" => Opcion -%c desconocida.\n", optopt);
-                    printf (" => Programa abortado\n");
-                    printf ("%s\n", "-------------------------------------------------------------------------");
-                    exit(EXIT_FAILURE);
-                }
+                    printf(" => Ruta del archivo de entrada (-i): %s\n", iValue);
+                    break;
+                
+                case 'o':
+                    // Obtencion de el nombre del archivo de salida
+                    strcpy(oValue, optarg);
+                    printf(" => Ruta del archivo de salida (-o): %s\n", oValue);
+                    break;
+                
+                case 'N':
+                    strcpy(nValue, optarg);
+                    // Verificacion de que el N entregado es un entero positivo.
+                    if (!isInteger(nValue)) {
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        printf (" => El argumento de -%c debe ser un ENTERO POSITIVO.\n", c);
+                        printf (" => Programa abortado\n");
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        exit(EXIT_FAILURE);
+                    }
+                
+                    printf(" => Largo de la lista (-N): %s\n", nValue);
+                    break;
+                
+                case 'd':
+                    strcpy(dValue, optarg);
+                    // Verificacion de que se ingresa un valor binario (1 o 0)
+                    if ( (strcmp(dValue, "0") != 0) && (strcmp(dValue, "1") != 0) ) {
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        printf (" => El argumento de -%c debe ser un VALOR BINARIO (1 o 0).\n", c);
+                        printf (" => Programa abortado\n");
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        exit(EXIT_FAILURE);
+                    }
 
-            default:
-                break;
+                    printf(" => Opcion debug (-d): %s\n", dValue);
+                    break;
+
+                case 'l':
+                    strcpy(lValue, optarg);
+                    // Verificacion de que el N entregado es un entero positivo.
+                    if (!isInteger(lValue)) {
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        printf (" => El argumento de -%c debe ser un ENTERO POSITIVO.\n", c);
+                        printf (" => Programa abortado\n");
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        exit(EXIT_FAILURE);
+                    }
+                
+                    printf(" => Numero de Niveles de Recusrividad (-l): %s\n", lValue);
+                    break;
+
+                case 'h':
+                    strcpy(hValue, optarg);
+                    // Verificacion de que el N entregado es un entero positivo.
+                    if (!isInteger(hValue)) {
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        printf (" => El argumento de -%c debe ser un ENTERO POSITIVO.\n", c);
+                        printf (" => Programa abortado\n");
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        exit(EXIT_FAILURE);
+                    }
+                
+                    printf(" => Numero de Hebras (-h): %s\n", hValue);
+                    break;
+                
+                case '?':
+                    // Verificacion de existencia de argumentos
+                    if ( (optopt == 'i') || (optopt == 'o') || (optopt == 'N') || (optopt == 'd') || (optopt == 'l') || (optopt == 'h') ) { 
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        printf (" => La opcion -%c requiere un argumento.\n", optopt);
+                        printf (" => Programa abortado\n");
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        exit(EXIT_FAILURE);
+                    }
+                    // Verificacion de la validez de las banderas
+                    else if (isprint (optopt)) {
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        printf (" => Opcion -%c desconocida.\n", optopt);
+                        printf (" => Programa abortado\n");
+                        printf ("%s\n", "-------------------------------------------------------------------------");
+                        exit(EXIT_FAILURE);
+                    }
+
+                default:
+                    break;
             }
+        }
+    }
+
+    else {
+        printf("ERROR AL ALOJAR MEMORIA PARA LOS PARAMETROS DE ENTRADA\n");
+        printf (" => Programa abortado\n");
+        exit(EXIT_FAILURE);
+    }   
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////// TDA HEAP ///////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - fileName: Nombre del archivo a leer
+// - OUTPUTS: Valor booleano 1 si el archivo existe, 0 en caso contrario
+// - DESCRIPTION: Verifica que el archivo con el nombre "fileName" existe y devuelve la verificacion.
+
+Heap* createHeap(int capacity) {
+
+    Heap* h = (Heap*)malloc(sizeof(Heap));
+
+    if(h != NULL) {
+        h -> capacity = capacity;
+        h -> count = 0;
+        h -> sequence = (float*)malloc(capacity * sizeof(float));
+        h -> IDs = (int*)malloc(capacity * sizeof(int));
+        
+        if ( ((h -> sequence) == NULL) || ((h -> IDs) == NULL) ) {
+            printf("ERROR AL ALOJAR MEMORIA PARA EL HEAP BINARIO\n");
+            printf (" => Programa abortado\n");
+            exit(EXIT_FAILURE);
+        }
+
+        return h;
+    }
+
+    else {
+        printf("ERROR AL ALOJAR MEMORIA PARA EL HEAP BINARIO\n");
+        printf (" => Programa abortado\n");
+        exit(EXIT_FAILURE);
+    }   
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - fileName: Nombre del archivo a leer
+// - OUTPUTS: Valor booleano 1 si el archivo existe, 0 en caso contrario
+// - DESCRIPTION: Verifica que el archivo con el nombre "fileName" existe y devuelve la verificacion.
+
+void insert (Heap* h, float new, int id) {
+
+    if ( (h -> count) < (h -> capacity) ) {
+        h -> sequence[h -> count] = new;
+        h -> IDs[h -> count] = id;
+        
+        heapifyUp (h, h -> count);
+        h -> count++;
+        
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - fileName: Nombre del archivo a leer
+// - OUTPUTS: Valor booleano 1 si el archivo existe, 0 en caso contrario
+// - DESCRIPTION: Verifica que el archivo con el nombre "fileName" existe y devuelve la verificacion.
+
+void heapifyUp (Heap* h, int index) {
+
+    int parentNode = (index - 1) / 2;
+
+    if ( index != 0 && (h -> sequence[parentNode]) > (h -> sequence[index]) ) {
+        float temp = h -> sequence[parentNode];
+        h -> sequence[parentNode] = h -> sequence[index];
+        h -> sequence[index] = temp;
+
+        int tempID = h -> IDs[parentNode];
+        h -> IDs[parentNode] = h -> IDs[index];
+        h -> IDs[index] = tempID;
+
+        heapifyUp(h, parentNode);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - fileName: Nombre del archivo a leer
+// - OUTPUTS: Valor booleano 1 si el archivo existe, 0 en caso contrario
+// - DESCRIPTION: Verifica que el archivo con el nombre "fileName" existe y devuelve la verificacion.
+
+int delete (Heap* h) {
+
+    int popID;
+    popID = h -> IDs[0];
+
+    if ( (h -> count) == 0) {
+        printf("HEAP VACIO\n");
+        return -1.0;
+    }
+
+    else if ( (h -> count) == 1) {
+        return popID;
+    }
+
+    h -> sequence[0] = h -> sequence[h -> count - 1];
+    h -> IDs[0] = h -> IDs[h -> count - 1];
+    
+    h -> count--;
+    heapifyDown (h, 0);
+    return popID;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - fileName: Nombre del archivo a leer
+// - OUTPUTS: Valor booleano 1 si el archivo existe, 0 en caso contrario
+// - DESCRIPTION: Verifica que el archivo con el nombre "fileName" existe y devuelve la verificacion.
+
+void heapifyDown (Heap* h, int parentNode) {
+
+    int left = (2 * parentNode) + 1;
+    int right = (2 * parentNode) + 2;
+    int minIndex = parentNode;
+
+    if ( (left < (h -> count) && ((h -> sequence[left]) < h -> sequence[parentNode])) )
+        minIndex = left;
+
+    if ( (right < (h -> count) && ((h -> sequence[right]) < h -> sequence[minIndex])) )
+        minIndex = right;
+
+    if (minIndex != parentNode) {
+        float temp = h -> sequence[parentNode];
+        h -> sequence[parentNode] = h -> sequence[minIndex];
+        h -> sequence[minIndex] = temp;
+
+        int tempID = h -> IDs[parentNode];
+        h -> IDs[parentNode] = h -> IDs[minIndex];
+        h -> IDs[minIndex] = tempID;
+        heapifyDown (h, minIndex);
+    }
+
+    /*
+    float temp;
+    int left, right, min, tempID;
+    left = (parentNode * 2) + 1;
+    right = (parentNode * 2) + 2;
+
+    if ( (left >= (h -> count)) || (left < 0) )
+        left = -1;
+    
+    if ( (right >= (h -> count)) || (right < 0) )
+        right = -1;
+
+    if ( (left != -1) && (h -> sequence[left] < h -> sequence[parentNode]) )
+        min = left;
+    
+    else
+        min = parentNode;
+
+    if ( (right != -1) && (h -> sequence[right] < h -> sequence[min]) )
+        min = right;
+
+    if (min != parentNode) {
+        temp = h -> sequence[min];
+        h -> sequence[min] = h -> sequence[parentNode];
+        h -> sequence[parentNode] = temp;
+
+        tempID = h -> IDs[min];
+        h -> IDs[min] = h -> IDs[parentNode];
+        h -> IDs[parentNode] = tempID;
+
+        heapifyDown (h, min);
+    }
+    */
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // - INPUTS: - fileName: Nombre del archivo a leer
 // - OUTPUTS: Valor booleano 1 si el archivo existe, 0 en caso contrario
@@ -145,6 +348,80 @@ int isInteger (char* input) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - input: Cadena de caracteres a evaluar si corresponde a un numero entero positivo o no
+// - OUTPUTS: Valor booleano 1 si es entero positivo, 0 en caso contrario
+// - DESCRIPTION: Verifica si una cadena de caracteres de entrada posee en cada una de sus posiciones un caracter que es
+//                digito y es positivo
+
+void vectorThreadSIMD (float* sequence, int N, int numLevels, int numThreads) {
+
+    float* sortedSequence = (float*)malloc(N * sizeof(float));
+
+    omp_set_num_threads(numThreads);
+	#pragma omp parallel
+    {
+        #pragma omp single nowait
+        {
+            recursiveSIMD (sequence, N, numLevels);
+        }
+    }
+
+    //printSequence (sortedSequence, N);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - input: Cadena de caracteres a evaluar si corresponde a un numero entero positivo o no
+// - OUTPUTS: Valor booleano 1 si es entero positivo, 0 en caso contrario
+// - DESCRIPTION: Verifica si una cadena de caracteres de entrada posee en cada una de sus posiciones un caracter que es
+//                digito y es positivo
+
+void recursiveSIMD (float* sequence, int N, int numLevels) {
+
+    if (numLevels == 0) {
+        
+        int index;
+        int L = N / 16;
+
+        float** sorted16Sequence = sequenceMalloc (N);
+        __m128 A, B, C, D, W_IR, X_IR, Y_IR, Z_IR, W_BMN, X_BMN, Y_BMN, Z_BMN, W_MSIMD, X_MSIMD, Y_MSIMD, Z_MSIMD;  // Registros MMX a utilizar en el programa
+        // Por cada secuencia de 16 elementos de la secuencia total de entrada se ejecuta la fase SIMD, formando al final de cada iteracion una secuencia de 
+        // 16 elementos ordenados de forma creciente.
+        for (index = 0; index < L; index++) {
+            //////////////////////////////////
+            //         FASE SIMD            //
+            //////////////////////////////////
+            loadSequence (sequence, index, &A, &B, &C, &D);                                     // Carga de secuencias en los registros MMX
+            inRegister (A, B, C, D, &W_IR, &X_IR, &Y_IR, &Z_IR);                                // Ordenamiento In Register
+            BMN (W_IR, X_IR, &W_BMN, &X_BMN);                                                   // BMN para la primera secuencia de 8
+            BMN (Y_IR, Z_IR, &Y_BMN, &Z_BMN);                                                   // BMN para la segunda secuencia de 8
+            mergeSIMD (W_BMN, X_BMN, Y_BMN, Z_BMN, &W_MSIMD, &X_MSIMD, &Y_MSIMD, &Z_MSIMD);     // Merge entre las dos secuencias de 8 generadas en las BMN anteriores
+            storeSequence (sorted16Sequence[index], W_MSIMD, X_MSIMD, Y_MSIMD, Z_MSIMD);        // Almacenar en memoria la secuencia de 16 generada anteriormente
+            //printSequence (sorted16Sequence[index], 16);
+        }
+
+        float* sortedSequence =  heapBasedMWMS (sorted16Sequence, N, L); 
+        printSequence(sortedSequence, N);     
+        return;  
+    }
+
+    int halfN = N / 2;
+    int nextLevel = numLevels - 1;
+
+    #pragma omp task untied
+    {
+        recursiveSIMD (sequence, halfN,  nextLevel);
+    }
+
+    #pragma omp task untied 
+    {
+        recursiveSIMD (sequence + halfN, halfN, nextLevel);
+    }
+
+    #pragma omp taskwait
+    //float* sortedSequence = merge2Way (leftSorted, rightSorted, N);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // - INPUTS: - inputName: Nombre del archivo de entrada que contiene el archivo en formato binario (RAW).
 //           - N: Largo de la secuencia contenida en el archivo de entrada (Numero entero multiplo de 16).
 // - OUTPUTS: Retorna un arreglo de vectores de 16 elementos, correspondiente a los vectores o secuencias de 16 numeros que pasaran por cada una de las
@@ -152,22 +429,193 @@ int isInteger (char* input) {
 // - DESCRIPTION: Toma el nombre del archivo de entrada y se abre en formato binario, luego se lee el contenido del archivo almacenando este cada 16
 //                elementos en un arreglo de largo L = N / 16, y se retorna estem arreglo.
 
-float** chargeSequence (char* inputName, int N) {
+float* merge2Way (float* s1, float* s2, int N) {
+
+    int mergedIndex = 0;
+    int L = N / 2;
+    int* indexArray = initIndexArray (2);
+    float* mergedSequence = (float*)malloc(N * sizeof(float));
+
+    if (mergedSequence != NULL) {
+
+        while (mergedIndex < N) {
+
+            if ( (s1[indexArray[0]] <= s2[indexArray[1]]) || (indexArray[1] == L) ) {
+                mergedSequence[mergedIndex] = s1[indexArray[0]];
+                indexArray[0] = indexArray[0] + 1;
+            }
+
+            if ( (s1[indexArray[0]] >= s2[indexArray[1]]) || (indexArray[0] == L) ){
+                mergedSequence[mergedIndex] = s2[indexArray[1]];
+                indexArray[1] = indexArray[1] + 1;
+            }
+
+            mergedIndex++;
+        }
+    }
+
+    return mergedSequence;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - inputName: Nombre del archivo de entrada que contiene el archivo en formato binario (RAW).
+//           - N: Largo de la secuencia contenida en el archivo de entrada (Numero entero multiplo de 16).
+// - OUTPUTS: Retorna un arreglo de vectores de 16 elementos, correspondiente a los vectores o secuencias de 16 numeros que pasaran por cada una de las
+//            etapas SIMD paara finalmente unirse en la etapa NO SIMD
+// - DESCRIPTION: Toma el nombre del archivo de entrada y se abre en formato binario, luego se lee el contenido del archivo almacenando este cada 16
+//                elementos en un arreglo de largo L = N / 16, y se retorna estem arreglo.
+
+float* heapBasedMWMS (float** sequence, int N, int L) {
+
+    float next, new;
+    int nextIndex;
+
+    if (L == 1)
+        return sequence[0];
+
+    float* sortedSequence = (float*)malloc(N * sizeof(float));
+
+    if (sortedSequence != NULL) {
+        int sortedIndex = 0;
+        Heap* h = createHeap (L);
+        int* indexArray = initIndexArray (L);
+
+        while (sortedIndex < N) {
+            
+            // PRIMERA INSERCION AL HEAP BINARIO
+            if (sortedIndex == 0) {
+
+                for (int index = 0; index < L; index++) {
+                    float min = sequence[index][0];
+                    int minIndex = index;
+                    insert (h, min, minIndex);
+                }
+            }
+
+            else if (indexArray[nextIndex] >= 16) {
+
+                if (isEmpty (indexArray, L) == 0) {
+                    int newIndex = remainingIndex (sequence, indexArray, L);
+                    new = sequence[newIndex][indexArray[newIndex]];
+                    insert (h, new, newIndex);
+                }
+            }
+
+            // INSERCION DEL ELEMENTO DE LA LISTA AL QUE PERTENECE EL RECIENTE SACADO DEL HEAP
+            else {
+                new = sequence[nextIndex][indexArray[nextIndex]];
+                insert (h, new, nextIndex);
+            }
+
+            nextIndex = delete (h);
+            next = sequence[nextIndex][indexArray[nextIndex]];
+            //printf("LIST ID: %d, INDEX LIST: %d, ROOT: %f\n", nextIndex, indexArray[nextIndex], next);
+            sortedSequence[sortedIndex] = next;
+            indexArray[nextIndex] = indexArray[nextIndex] + 1;
+            sortedIndex++;
+        }
+
+        return sortedSequence;
+
+    }
+
+    else{
+        printf("ERROR AL ALOJAR MEMORIA PARA LA SECUENCIA ORDENADA\n");
+        printf (" => Programa abortado\n");
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - inputName: Nombre del archivo de entrada que contiene el archivo en formato binario (RAW).
+//           - N: Largo de la secuencia contenida en el archivo de entrada (Numero entero multiplo de 16).
+// - OUTPUTS: Retorna un arreglo de vectores de 16 elementos, correspondiente a los vectores o secuencias de 16 numeros que pasaran por cada una de las
+//            etapas SIMD paara finalmente unirse en la etapa NO SIMD
+// - DESCRIPTION: Toma el nombre del archivo de entrada y se abre en formato binario, luego se lee el contenido del archivo almacenando este cada 16
+//                elementos en un arreglo de largo L = N / 16, y se retorna estem arreglo.
+
+int isEmpty (int* indexArray, int L) {
+
+    for (int i = 0; i < L; i++) {
+        if (indexArray[i] < 16)
+            return 0;
+    }
+
+    return 1;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - inputName: Nombre del archivo de entrada que contiene el archivo en formato binario (RAW).
+//           - N: Largo de la secuencia contenida en el archivo de entrada (Numero entero multiplo de 16).
+// - OUTPUTS: Retorna un arreglo de vectores de 16 elementos, correspondiente a los vectores o secuencias de 16 numeros que pasaran por cada una de las
+//            etapas SIMD paara finalmente unirse en la etapa NO SIMD
+// - DESCRIPTION: Toma el nombre del archivo de entrada y se abre en formato binario, luego se lee el contenido del archivo almacenando este cada 16
+//                elementos en un arreglo de largo L = N / 16, y se retorna estem arreglo.
+
+int remainingIndex (float** sequence, int* indexArray, int L) {
+
+    int minIndex;
+    float min;
+    int firstIndex = 1;
+
+    for (int i = 0; i < L; i++) {
+        int seqIndex = indexArray[i];
+
+        if (seqIndex < 16) {
+
+            if (firstIndex == 1) {
+                min = sequence[i][seqIndex];
+                minIndex = i;
+                firstIndex = 0;
+            }
+
+            if (sequence[i][seqIndex] < min) {
+                min = sequence[i][seqIndex];
+                minIndex = i;
+            }
+        }
+    }
+
+    return minIndex;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// - INPUTS: - inputName: Nombre del archivo de entrada que contiene el archivo en formato binario (RAW).
+//           - N: Largo de la secuencia contenida en el archivo de entrada (Numero entero multiplo de 16).
+// - OUTPUTS: Retorna un arreglo de vectores de 16 elementos, correspondiente a los vectores o secuencias de 16 numeros que pasaran por cada una de las
+//            etapas SIMD paara finalmente unirse en la etapa NO SIMD
+// - DESCRIPTION: Toma el nombre del archivo de entrada y se abre en formato binario, luego se lee el contenido del archivo almacenando este cada 16
+//                elementos en un arreglo de largo L = N / 16, y se retorna estem arreglo.
+
+float* chargeSequence (char* inputName, int N) {
 
     int index = 0;
     FILE* inputFile = fopen(inputName, "rb");
     
+    
     if (inputFile != NULL) {
         // Primero se reserva memoria dependiendo del largo de secuencia, reservando memoria cada 16 elemntos.
-        float** sequences = sequenceMalloc (N);
+        float* sequence = (float*)malloc(N * sizeof(float));
 
-        // Mientras queden datos que leer en el archivo de entrada se almacena la informacion en el arreglo anteriormente creado.
-        while (!feof(inputFile)) {
-            fread(sequences[index], sizeof(float), 16, inputFile);
-            index++;
+        if (sequence != NULL) {
+            // Mientras queden datos que leer en el archivo de entrada se almacena la informacion en el arreglo anteriormente creado.
+            while (!feof(inputFile)) {
+                float current;
+                fread(&current, sizeof(float), 1, inputFile);
+                sequence[index] = current;
+                index++;
+            }
+
+            fclose(inputFile);
+            return sequence;
         }
-        fclose(inputFile);
-        return sequences;
+
+        else{
+            printf("ERROR AL ALOJAR MEMORIA PARA LA SECUENCIA DE ENTRADA\n");
+            printf (" => Programa abortado\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     // En caso de que el archivo de entrada no existe el programa es abortado.
@@ -187,13 +635,13 @@ float** chargeSequence (char* inputName, int N) {
 // - OUTPUTS: -
 // - DESCRIPTION: Procedimiento que toma un vector de 16 elementos, y los distribuye de forma equitativa entre 4 registros MMX.
 
-void loadSequence (float* sequence, __m128* A, __m128* B, __m128* C, __m128* D) {
+void loadSequence (float* sequence, int index, __m128* A, __m128* B, __m128* C, __m128* D) {
 
     // Se almacenan los numeros en arreglos estaticos, los primeros 4 en a, los siguientes en b, los siguientes en c y los ultimos 4 en d.
-    float a[4] __attribute__((aligned(16))) = { sequence[0], sequence[1], sequence[2], sequence[3] };
-    float b[4] __attribute__((aligned(16))) = { sequence[4], sequence[5], sequence[6], sequence[7] };
-    float c[4] __attribute__((aligned(16))) = { sequence[8], sequence[9], sequence[10], sequence[11] };
-    float d[4] __attribute__((aligned(16))) = { sequence[12], sequence[13], sequence[14], sequence[15] };
+    float a[4] __attribute__((aligned(16))) = { sequence[(index * 16) + 0], sequence[(index * 16) + 1], sequence[(index * 16) + 2], sequence[(index * 16) + 3] };
+    float b[4] __attribute__((aligned(16))) = { sequence[(index * 16) + 4], sequence[(index * 16) + 5], sequence[(index * 16) + 6], sequence[(index * 16) + 7] };
+    float c[4] __attribute__((aligned(16))) = { sequence[(index * 16) + 8], sequence[(index * 16) + 9], sequence[(index * 16) + 10], sequence[(index * 16) + 11] };
+    float d[4] __attribute__((aligned(16))) = { sequence[(index * 16) + 12], sequence[(index * 16) + 13], sequence[(index * 16) + 14], sequence[(index * 16) + 15] };
 
     // Se cargan los 4 numeros (floats) en los registros MMX correspondientes desde los arreglos a, b, d y d.
     *A = _mm_load_ps (a);
@@ -556,8 +1004,9 @@ void print16Sequence (float* sequence) {
 void printSequence (float* sequence, int N) {
 
     for (int i = 0; i < N; i++) {
-        printf("%f\n", sequence[i]);
+        printf("i: %d, TID: %d, %f\n", i, omp_get_thread_num(),  sequence[i]);
     }
+    printf("\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -597,12 +1046,11 @@ float** sequenceMalloc (int N) {
 // - OUTPUTS: -
 // - DESCRIPTION: Liberar punteros utilizados en el programa.
 
-void freeMemory (char* iValue, char* oValue, char* nValue, char* dValue, float** sequence, float** sorted16sequence, float* sortedSequence, int L) {
+void freeMemory (char* iValue, char* oValue, char* nValue, char* dValue, float* sequence, float** sorted16sequence, float* sortedSequence, int L) {
 
     int index;
 
     for (index = 0; index < L; index++) {
-        free(sequence[index]);
         free(sorted16sequence[index]);
     }
 

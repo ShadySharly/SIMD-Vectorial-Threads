@@ -6,13 +6,15 @@ CL = clean
 H_DIR = ./header
 SRC_DIR = ./src
 OBJ_DIR = ./obj
-SIMD_H = $(H_DIR)/simdsort.h
+SIMD_H = $(H_DIR)/simdsort.h 
+STRCT_H = $(H_DIR)/structs.h 
 MAIN_OBJ = $(OBJ_DIR)/main.o
 SIMD_OBJ = $(OBJ_DIR)/simdsort.o 
 MAIN_SRC = $(SRC_DIR)/main.c
 SIMD_SRC = $(SRC_DIR)/simdsort.c
 EXEC = simdsort
 C_FLAGS = -g -Wall
+OMP_FLAGS = -fopenmp
 
 #////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #//////////////////////////////////////////////////////////////////// TARGETS ///////////////////////////////////////////////////////////////////////////
@@ -23,7 +25,7 @@ all: inimsj $(EXEC) endmsj
 $(EXEC): clean obj $(MAIN_OBJ) $(SIMD_OBJ)
 	@echo '-------------------------------------------------------------------------'
 	@echo ' => Compiling target "$(@F)"'
-	$(CC) $(C_FLAGS) $(MAIN_OBJ) $(SIMD_OBJ) -o $@
+	$(CC) $(C_FLAGS) $(OMP_FLAGS) $(MAIN_OBJ) $(SIMD_OBJ) -o $@ 
 	@echo ' => "$(@F)" compiled in the directory "$(@D)"'
 	@echo ' => Execute the program by typing: ./$(@F) -i nombreEntrada.raw -o nombreSalida.raw -N largoSecuencia -d debug'
 	@echo '-------------------------------------------------------------------------'
@@ -33,14 +35,14 @@ $(EXEC): clean obj $(MAIN_OBJ) $(SIMD_OBJ)
 $(MAIN_OBJ): $(MAIN_SRC)
 	@echo '-------------------------------------------------------------------------'
 	@echo ' => Compiling target "$(@F)"'
-	$(CC) $(C_FLAGS) -c $< -o $@
+	$(CC) $(C_FLAGS) $(OMP_FLAGS) -c $< -o $@
 	@echo ' => "$(@F)" compiled in the directory "$(@D)"'
 	@echo '-------------------------------------------------------------------------'
 
-$(SIMD_OBJ): $(SIMD_SRC) $(SIMD_H)
+$(SIMD_OBJ): $(SIMD_SRC) $(SIMD_H) $(STRCT_H)
 	@echo '-------------------------------------------------------------------------'
 	@echo ' => Compiling target "$(@F)"'
-	$(CC) $(C_FLAGS) -c $< -o $@
+	$(CC) $(C_FLAGS) $(OMP_FLAGS) -c $< -o $@
 	@echo ' => "$(@F)" compiled in the directory "$(@D)"'
 	@echo '-------------------------------------------------------------------------'
 

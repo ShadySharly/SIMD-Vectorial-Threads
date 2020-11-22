@@ -4,19 +4,41 @@
 # ifndef SIMDSORT_H
 # define SIMDSORT_H
 
+# include "../header/structs.h"
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////// DEFINITIONS /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv);
 
-void getParams (int argc, char** argv, char* iValue, char* oValue, char* nValue, char* dValue);
+void insert (Heap* h, float new, int id);
 
-float** chargeSequence (char* inputName, int N);
+void heapifyUp (Heap* h, int index);
+
+int delete (Heap* h);
+
+void heapifyDown (Heap* h, int parentNode);
+
+void getParams (int argc, char** argv, char* iValue, char* oValue, char* nValue, char* dValue, char* lValue, char* hValue);
+
+float* chargeSequence (char* inputName, int N);
 
 float** sequenceMalloc (int N);
 
-void loadSequence (float* sequences, __m128* A, __m128* B, __m128* C, __m128* D);
+void vectorThreadSIMD (float* sequence, int N, int numLevels, int numThreads);
+
+void recursiveSIMD (float* sequence, int N, int numLevels);
+
+int remainingIndex (float** sequence, int* indexArray, int L);
+
+float* merge2Way (float* s1, float* s2, int N);
+
+int isEmpty (int* indexArray, int L);
+
+float* heapBasedMWMS (float** sequence, int N, int L);
+
+void loadSequence (float* sequence, int index, __m128* A, __m128* B, __m128* C, __m128* D);
 
 void storeSequence (float* sequence, __m128 WF, __m128 XF, __m128 YF, __m128 ZF);
 
@@ -40,7 +62,7 @@ int isInteger (char* input);
 
 int exist (char* fileName);
 
-void freeMemory (char* iValue, char* oValue, char* nValue, char* dValue, float** sequence, float** sorted16sequence, float* sortedSequence, int L);
+void freeMemory (char* iValue, char* oValue, char* nValue, char* dValue, float* sequence, float** sorted16sequence, float* sortedSequence, int L);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////// END ////////////////////////////////////////////////////////////////////////////
